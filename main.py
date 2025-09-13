@@ -27,6 +27,27 @@ class Veterinarios(mybd.Model):
             "telefone": self.telefone
         }
     
+
+class Pet(mybd.Model):
+    __tablename__ = 'tb_pets'
+    id_pet = mybd.Column(mybd.Integer, primary_key=True)
+    nome = mybd.Column(mybd.String(150))
+    tipo = mybd.Column(mybd.String(50))
+    raca = mybd.Column(mybd.String(30))
+    data_nascimento = mybd.Column(mybd.String(10))
+    id_cliente = mybd.Column(mybd.Integer, mybd.ForeignKey('tb_clientes.id_cliente'))
+
+    # converte em json
+    def pets_to_json(self):
+        return {
+            "id_cliente": self.id_cliente,
+            "nome": self.nome,
+            "tipo": self.tipo,
+            "raca": self.raca,
+            "data_nascimento": self.data_nascimento,
+            "id_cliente": self.id_cliente
+        }
+    
 # --------------------------------------------------------------------
 # GET
 app.route('/veterinarios', methods=['GET'])
@@ -34,6 +55,12 @@ def get_veterinario():
     consulta_veterinarios = Veterinarios.query.all() #select
     veterionarios_json = consulta_veterinarios.to_json() #converte para json
     return jsonify(veterionarios_json) #retorna o json
+
+app.route('/pets', methods=['GET'])
+def get_pets():
+    consulta_pets = Pet.query.all() 
+    veterionarios_json = consulta_pets.to_json() 
+    return jsonify(veterionarios_json)
 
 # --------------------------------------------------------------------
 # POST
@@ -56,6 +83,29 @@ def post_veterinario():
         print('Erro', e)
         return resposta(400, "Erro ao cadastrar veterinario", {})
     
+
+
+@app.route('/pets', methods=['POST'])
+def post_pets():
+    requisição = request.get_json()
+    try:
+        pets = Pet(
+            id_pet=requisição['id_cliente'],
+            nome=requisição['nome'],
+            tipo=requisição['tipo'],
+            raca=requisição['raca'],
+            data_nascimento=requisição['data_nascimento'],
+            id_cliente=requisição['id_cliente']
+        )
+
+        mybd.session.add(pets)
+        mybd.session.commit()
+
+        return resposta(201, "Lista de veterinarios", pets.to_json())  
+    except Exception as e:
+        print('Erro', e)
+        return resposta(400, "Erro ao cadastrar veterinario", {})
+    
 # --------------------------------------------------------------------  
 # DELETE
 @app.route('/veterinarios/<id_cliente>', methods=['DELETE'])
@@ -70,6 +120,20 @@ def delete_veterinario(id_cliente):
         print('Erro', e)
         return resposta(400, "Erro ao deletar veterinario", {})
     
+
+@app.route('/pets/<id_pet>', methods=['DELETE'])
+def delete_pet(id_pet):
+    pets = Pet.query.filter_by(id_pet=id_pet).first()
+
+    try:
+        mybd.session.delete(pets)
+        mybd.session.commit()
+        return resposta(200, "Pet deletado", {})
+    except Exception as e:
+        print('Erro', e)
+        return resposta(400, "Erro ao deletar pet", {})
+    
+
 # --------------------------------------------------------------------
 # PUT
 @app.route('/veterinarios/<id_cliente>', methods=['PUT'])
@@ -94,7 +158,37 @@ def put_veterinario(id_cliente):
     except Exception as e:
         print('Erro', e)
         return resposta(400, "Erro ao atualizar veterinario", {})
-        
+
+
+@app.route('/pets/<id_pet>', methods=['PUT'])
+def put_pet(id_pet):
+    pets = Pet.query.filter_by(id_pet=id_pet).first()
+    requisicao = request.get_json()
+
+    try:
+        if('nome' in requisicao):
+            pets.nome = requisicao['nome']
+
+        if('tipo' in requisicao):
+            pets.tipo = requisicao['tipo']
+
+        if('raca' in requisicao):
+            pets.raca = requisicao['raca']
+
+        if('data_nascimento' in requisicao):
+            pets.data_nascimento = requisicao['data_nascimento']
+
+        if('id_cliente' in requisicao):
+            pets.id_cliente = requisicao['id_cliente']
+
+        mybd.session.add(pets)
+        mybd.session.commit()
+
+        return resposta(200, "Pet atualizado", pets.to_json())
+    except Exception as e:
+        print('Erro', e)
+        return resposta(400, "Erro ao atualizar pet", {})
+
 
 # --------------------------------------------------------------------
 def resposta(status, nome_do_conteudo, conteudo, mensagem=False):
